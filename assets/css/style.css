@@ -1,0 +1,48 @@
+.gf-product-field {
+    margin-bottom: 20px;
+}
+
+.gf-product-select {
+    width: 100%;
+    max-width: 100%;
+    padding: 8px;
+}
+
+.gf-quantity-wrapper {
+    margin-top: 10px;
+}
+
+.gf-quantity-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+    padding: 5px 0;
+}
+
+.gf-quantity-item label {
+    flex: 1;
+    margin-right: 10px;
+}
+
+.gf-product-quantity {
+    width: 80px !important;
+    padding: 5px !important;
+}
+
+.gf-product-checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.gf-product-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.gf-product-checkbox-item label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
