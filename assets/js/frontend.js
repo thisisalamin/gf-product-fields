@@ -1,126 +1,83 @@
 (function($) {
     'use strict';
 
-    class GFProductFields {
-        constructor() {
-            this.init();
-        }
-
-        init() {
-            this.bindEvents();
-            this.initializeFields();
-        }
-
-        bindEvents() {
-            $(document).on('change', '.gf-product-select, .gf-product-checkbox', this.handleProductChange.bind(this));
-            $(document).on('change', '.gf-product-quantity', this.handleQuantityChange.bind(this));
-            $(document).on('gform_post_render', this.initializeFields.bind(this));
-        }
-
-        initializeFields() {
-            $('.gf-product-field').each((i, el) => {
-                const $field = $(el);
-                const fieldType = $field.hasClass('gf-product-multiselect') ? 'multiselect' : 'checkbox';
-                
-                // Initialize quantity fields if needed
-                if (fieldType === 'multiselect' && $field.find('.gf-quantity-wrapper').length) {
-                    this.updateMultiSelectQuantities($field);
-                }
-                
-                this.calculateTotal($field.closest('form'));
-            });
-        }
-
-        handleProductChange(e) {
-            const $field = $(e.target);
-            const $wrapper = $field.closest('.gf-product-field');
-            const $form = $wrapper.closest('form');
-
-            if ($wrapper.hasClass('gf-product-multiselect')) {
-                this.updateMultiSelectQuantities($wrapper);
-            }
-
-            this.calculateTotal($form);
-        }
-
-        handleQuantityChange(e) {
-            const $form = $(e.target).closest('form');
-            this.calculateTotal($form);
-        }
-
-        updateMultiSelectQuantities($wrapper) {
-            const $select = $wrapper.find('.gf-product-select');
-            const $quantityWrapper = $wrapper.find('.gf-quantity-wrapper');
+    // Handle multiselect changes
+    $(document).on('change', '.gf-product-multiselect', function() {
+        var $select = $(this);
+        var $quantities = $select.closest('.ginput_container').find('.gf-quantity-field');
+        
+        // Show/hide quantity fields based on selection
+        $quantities.each(function() {
+            var $qty = $(this);
+            var productValue = $qty.data('product');
+            var isSelected = $select.find('option[value="' + productValue + '"]').is(':selected');
             
-            $quantityWrapper.empty();
-            
-            $select.find('option:selected').each((i, option) => {
-                const value = $(option).val();
-                const text = $(option).text();
-                const price = $(option).data('price');
-                
-                $quantityWrapper.append(this.createQuantityField(value, text, price));
-            });
-        }
-
-        createQuantityField(value, text, price) {
-            return `
-                <div class="gf-quantity-item">
-                    <label>${text}</label>
-                    <input type="number" 
-                           class="gf-product-quantity" 
-                           data-product="${value}"
-                           data-price="${price}"
-                           min="1" 
-                           value="1">
-                </div>
-            `;
-        }
-
-        calculateTotal($form) {
-            let total = 0;
-
-            $form.find('.gf-product-field').each((i, field) => {
-                const $field = $(field);
-                
-                if ($field.find('.gf-product-select').length) {
-                    total += this.calculateMultiSelectTotal($field);
-                } else if ($field.find('.gf-product-checkbox').length) {
-                    total += this.calculateCheckboxTotal($field);
-                }
-            });
-
-            // Update Gravity Forms total
-            if (window.gformCalculateTotalPrice) {
-                window.gformCalculateTotalPrice($form.attr('id'));
+            $qty.toggle(isSelected);
+            if (!isSelected) {
+                $qty.find('input').val(0);
             }
-        }
+        });
+        
+        updateTotalPrice();
+    });
 
-        calculateMultiSelectTotal($field) {
-            let total = 0;
-            $field.find('.gf-product-quantity').each((i, input) => {
-                const $input = $(input);
-                const price = parseFloat($input.data('price')) || 0;
-                const quantity = parseInt($input.val()) || 0;
-                total += price * quantity;
-            });
-            return total;
+    // Handle checkbox changes
+    $(document).on('change', '.ginput_container_product_checkbox input[type="checkbox"]', function() {
+        var $checkbox = $(this);
+        var $qtyField = $checkbox.closest('.gf-product-checkbox-item').find('.gf-quantity-field');
+        
+        $qtyField.toggle($checkbox.is(':checked'));
+        if (!$checkbox.is(':checked')) {
+            $qtyField.find('input').val(0);
         }
+        
+        updateTotalPrice();
+    });
 
-        calculateCheckboxTotal($field) {
-            let total = 0;
-            $field.find('.gf-product-checkbox:checked').each((i, checkbox) => {
-                const $checkbox = $(checkbox);
-                const price = parseFloat($checkbox.data('price')) || 0;
-                const $quantity = $field.find(`.gf-product-quantity[data-product="${$checkbox.val()}"]`);
-                const quantity = parseInt($quantity.val()) || 1;
-                total += price * quantity;
+    // Handle quantity changes
+    $(document).on('change', '.gf-product-quantity', function() {
+        updateTotalPrice();
+    });
+
+    function updateTotalPrice() {
+        var total = 0;
+        
+        // Calculate total for multiselect fields
+        $('.gf-product-multiselect').each(function() {
+            var $select = $(this);
+            $select.find('option:selected').each(function() {
+                var price = parseFloat($(this).data('price')) || 0;
+                var qtyField = $select.closest('.ginput_container').find('.gf-quantity-field[data-product="' + $(this).val() + '"] input');
+                var qty = parseInt(qtyField.val()) || 1;
+                total += price * qty;
             });
-            return total;
+        });
+
+        // Calculate total for checkbox fields
+        $('.ginput_container_product_checkbox').each(function() {
+            $(this).find('input[type="checkbox"]:checked').each(function() {
+                var price = parseFloat($(this).data('price')) || 0;
+                var qty = parseInt($(this).closest('.gf-product-checkbox-item').find('.gf-product-quantity').val()) || 1;
+                total += price * qty;
+            });
+        });
+
+        // Update Gravity Forms total field
+        if (window.gform) {
+            // Find all total fields and update them
+            $('.ginput_total').each(function() {
+                $(this).val(gformFormatMoney(total));
+            });
+            
+            // Trigger Gravity Forms calculations
+            gform.total = total;
+            gform.callTrigger('gform_product_total_changed');
         }
     }
 
-    // Initialize when document is ready
-    $(document).ready(() => new GFProductFields());
+    // Initialize totals on page load
+    $(document).ready(function() {
+        updateTotalPrice();
+    });
 
 })(jQuery);

@@ -22,7 +22,8 @@ class GF_Enhanced_Product_Fields {
     private $nonce_key = 'gf_product_fields_nonce';
     
     public function __construct() {
-        add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
+        // Change wp_enqueue_scripts to gform_enqueue_scripts for better compatibility
+        add_action('gform_enqueue_scripts', array($this, 'enqueue_scripts'), 10, 2);
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_filter('gform_field_standard_settings', array($this, 'add_field_settings'), 10, 2);
         add_action('gform_editor_js', array($this, 'editor_script'));
@@ -31,22 +32,39 @@ class GF_Enhanced_Product_Fields {
         add_filter('gform_form_post_get_meta', array($this, 'modify_form_meta'));
     }
 
-    // Enqueue frontend JavaScript
-    public function enqueue_scripts() {
-        wp_enqueue_style(
+    // Update the enqueue_scripts method
+    public function enqueue_scripts($form, $is_ajax) {
+        // Ensure Gravity Forms scripts are loaded first
+        if (!wp_script_is('gform_gravityforms', 'enqueued')) {
+            gravity_form_enqueue_scripts($form['id'], false);
+        }
+        
+        // Register and enqueue our styles
+        wp_register_style(
             'gf-product-fields',
             plugin_dir_url(__FILE__) . 'assets/css/style.css',
             array(),
             '1.0.0'
         );
+        wp_enqueue_style('gf-product-fields');
         
-        wp_enqueue_script(
+        // Register our script
+        wp_register_script(
             'gf-product-fields',
             plugin_dir_url(__FILE__) . 'assets/js/frontend.js',
             array('jquery', 'gform_gravityforms'),
             '1.0.0',
             true
         );
+
+        // Localize the script with form-specific data
+        wp_localize_script('gf-product-fields', 'gfProductFields', array(
+            'formId' => $form['id'],
+            'ajaxurl' => admin_url('admin-ajax.php')
+        ));
+
+        // Enqueue our script
+        wp_enqueue_script('gf-product-fields');
     }
 
     // Enqueue admin scripts to prevent conflicts
