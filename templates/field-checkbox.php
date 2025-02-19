@@ -4,6 +4,8 @@ $field_name = "input_{$field_id}[]";
 $field_value = is_array($value) ? $value : array();
 ?>
 
+<?php if (!defined('ABSPATH')) exit; ?>
+
 <div class="ginput_container ginput_container_product_checkbox">
     <table class="gf-product-table">
         <thead>
@@ -21,7 +23,7 @@ $field_value = is_array($value) ? $value : array();
                 <tr class="gf-product-row">
                     <td class="gf-product-select">
                         <input type="checkbox" 
-                               name="<?php echo esc_attr($field_name); ?>"
+                               name="<?php echo esc_attr($field_name); ?>[]"
                                value="<?php echo esc_attr($choice['value']); ?>"
                                data-price="<?php echo esc_attr($choice['price']); ?>"
                                <?php checked(in_array($choice['value'], $field_value), true); ?>>
@@ -31,9 +33,10 @@ $field_value = is_array($value) ? $value : array();
                     </td>
                     <?php if ($has_quantity) : ?>
                         <td class="gf-product-qty">
-                            <input type="number" min="0" value="0" 
+                            <input type="number" min="1" value="1" 
                                    name="quantity_<?php echo esc_attr($field_id); ?>_<?php echo esc_attr($choice['value']); ?>"
-                                   class="gf-product-quantity">
+                                   class="gf-product-quantity"
+                                   <?php echo !in_array($choice['value'], $field_value) ? 'disabled' : ''; ?>>
                         </td>
                     <?php endif; ?>
                     <td class="gf-product-price">
@@ -43,4 +46,10 @@ $field_value = is_array($value) ? $value : array();
             <?php endforeach; ?>
         </tbody>
     </table>
+    <!-- Hidden input for Gravity Forms price calculation -->
+    <input type="hidden" 
+           name="input_<?php echo esc_attr($field_id); ?>_total" 
+           id="input_<?php echo esc_attr($form_id); ?>_<?php echo esc_attr($field_id); ?>_total" 
+           class="gform_hidden ginput_total" 
+           value="0">
 </div>
